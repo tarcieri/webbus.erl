@@ -1,0 +1,16 @@
+{application, webbus,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {agner, [
+    {requires, ["socketio"]}
+  ]},
+  {applications, [
+  	kernel,
+   	stdlib,
+   	misultin
+  ]},
+  {mod, { webbus_app, []}},
+  {env, []}
+ ]}.
