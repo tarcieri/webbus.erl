@@ -4,6 +4,7 @@
 -include_lib("../deps/socketio/include/socketio.hrl").
 -compile(export_all).
 -behaviour(gen_event).
+-define(HASH_SIZE, 160).
 
 main(_) ->
     appmon:start(),
@@ -30,7 +31,7 @@ handle_event({disconnect, Pid}, State) ->
     {ok, State};
 handle_event({message, Client, #msg{} = Msg}, State) ->
     io:format("Got a message: ~p from ~p~n",[Msg, Client]),
-	handle_message(Client, Msg, State);
+    handle_message(Client, Msg, State);
 
 handle_event(E, State) ->
     {ok, State}.
@@ -49,15 +50,24 @@ code_change(_OldVsn, State, _Extra) ->
 %%
 
 handle_message(Client, #msg{content = [{Command, Params}]}, State) ->
-	handle_command(Command, Client, Params, State);
+    handle_command(Command, Client, Params, State);
 handle_message(Client, #msg{content = Content}, State) ->
-	socketio_client:send(Client, #msg{content = "hello!"}),
+    socketio_client:send(Client, #msg{content = "hello!"}),
     socketio_client:send(Client, #msg{content = [{<<"echo">>, Content}], json = true}),
     {ok, State}.
 
 handle_command(<<"register">>, Client, Params, State) ->
-	register_client(Client, Params),
-	{ok, State}.
+    register_client(Client, Params),
+    {ok, State};
+handle_command(Command, Client, Params, State) ->
+    Response = [{<<"error">>, [
+        {<<"code">>, 404},
+        {<<"text">>, <<"Unknown command">>},
+        {<<"command">>, Command}, 
+        {<<"params">>, Params}
+    ]}],
+    socketio_client:send(Client, #msg{json = true, content = Response}),
+    {ok, State}.
 
 handle_request('GET', [], Req) ->
     Req:file(filename:join([filename:dirname(code:which(?MODULE)), "index.html"]));
@@ -65,10 +75,10 @@ handle_request(_Method, _Path, Req) ->
     Req:respond(200).
 
 register_client(Client, Params) ->
-	Tripcode = case proplists:get_value(<<"tripcode">>, Params) of
-		undefined ->
-			crypto:rand_bytes(160); % Generate a random tripcode
-		Bin when is_binary(Bin) ->
-			Bin
-	end,
-	io:format("Registering with tripcode: ~p~n", [Tripcode]).
+    Tripcode = case proplists:get_value(<<"tripcode">>, Params) of
+        undefined ->
+            crypto:rand_bytes(?HASH_SIZE); % Generate a random tripcode
+        Bin when is_binary(Bin) ->
+            Bin
+    end,
+    io:format("Registering with tripcode: ~p~n", [Tripcode]).

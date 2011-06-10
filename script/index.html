@@ -16,6 +16,7 @@
          console.log("Imma connectad!");
          console.log(socket);
          socket.send({register: {tripcode: navigator.userAgent}});
+         socket.send({join:     {tripcode: 'lolcats'}});
       });
       socket.connect();
       }
