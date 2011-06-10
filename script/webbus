@@ -72,7 +72,7 @@ handle_command(Command, Client, Params, State) ->
 handle_request('GET', [], Req) ->
     Req:file(filename:join([filename:dirname(code:which(?MODULE)), "index.html"]));
 handle_request(_Method, _Path, Req) ->
-    Req:respond(200).
+    Req:respond(404).
 
 register_client(Client, Params) ->
     Tripcode = case proplists:get_value(<<"tripcode">>, Params) of
