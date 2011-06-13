@@ -1,3 +1,4 @@
+% Misultin HTTP handler (for non-Socket.io requests)
 -module(webbus_http_handler).
 -export([handle_request/3]).
 

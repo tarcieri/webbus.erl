@@ -1,3 +1,4 @@
+% Socket.io event handler
 -module(webbus_event_handler).
 -behaviour(gen_event).
 -export([init/1, handle_event/2, handle_call/2, handle_info/2, terminate/2, code_change/3]).
@@ -16,11 +17,18 @@ handle_event({client, Pid}, State) ->
 handle_event({disconnect, Pid}, State) ->
     io:format("Disconnected: ~p~n",[Pid]),
     {ok, State};
-handle_event({message, Client, #msg{} = Msg}, State) ->
-    io:format("Got a message: ~p from ~p~n",[Msg, Client]),
-    handle_message(Client, Msg, State);
-
-handle_event(_E, State) ->
+handle_event({message, Client, #msg{content = [{Command, Params}]}}, State) ->
+    handle_command(Command, Client, Params, State),
+    {ok, State};
+handle_event({message, Client, #msg{content = Content}}, State) ->
+    Response = [{<<"error">>, [
+        {<<"code">>, 400},
+        {<<"text">>, <<"Bad request">>},
+        {<<"message">>, Content}
+    ]}],
+    socketio_client:send(Client, #msg{json = true, content = Response}),
+    {ok, State};
+handle_event(_Event, State) ->
     %% FIXME: Uhh, log unknown event or something?
     {ok, State}.
     
@@ -36,13 +44,6 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 %%    
-
-handle_message(Client, #msg{content = [{Command, Params}]}, State) ->
-    handle_command(Command, Client, Params, State);
-handle_message(Client, #msg{content = Content}, State) ->
-    socketio_client:send(Client, #msg{content = "hello!"}),
-    socketio_client:send(Client, #msg{content = [{<<"echo">>, Content}], json = true}),
-    {ok, State}.
 
 handle_command(<<"register">>, Client, Params, State) ->
     register_client(Client, Params),
