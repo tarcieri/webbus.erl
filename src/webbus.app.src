@@ -4,7 +4,7 @@
   {vsn, "1"},
   {registered, []},
   {agner, [
-    {requires, ["socketio"]}
+    {requires, ["gproc", "socketio"]}
   ]},
   {applications, [
   	kernel,

@@ -6,6 +6,7 @@
 main(_) ->
     appmon:start(),
     application:start(sasl),
+    application:start(gproc),
     application:start(misultin),
     application:start(socketio),
     {ok, Pid} = socketio_listener:start([
