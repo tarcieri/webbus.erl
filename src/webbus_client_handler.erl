@@ -4,10 +4,12 @@
 -export([init/1, handle_event/2, handle_call/2, handle_info/2, terminate/2, code_change/3]).
 -include_lib("../deps/socketio/include/socketio.hrl").
 -define(HASH_SIZE, 160).
+-record(state, {peer_addr}).
 
 init([Request]) ->
-    io:format("Request: ~p~n", [Request]),
-    {ok, undefined}.
+    PeerAddr = misultin_ws:get(peer_addr, Request),
+    io:format("*** ~p connected~n", [PeerAddr]),
+    {ok, #state{peer_addr = PeerAddr}}.
     
 handle_event({message, Client, #msg{content = [{Command, Params}]}}, State) ->
     handle_command(Command, Client, Params, State),
@@ -30,7 +32,8 @@ handle_call(_, State) ->
 handle_info(_, State) ->
     {ok, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    io:format("*** ~p disconnected~n", [State#state.peer_addr]),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

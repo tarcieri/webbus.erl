@@ -7,14 +7,14 @@ init([]) ->
     {ok, undefined}.
 
 handle_event({client, Pid}, State) ->
-    io:format("Connected: ~p~n", [Pid]),
+    %io:format("Connected: ~p~n", [Pid]),
     EventMgr = socketio_client:event_manager(Pid),
     Request =  socketio_client:request(Pid),
     
     ok = gen_event:add_handler(EventMgr, webbus_client_handler, [Request]),
     {ok, State};
-handle_event({disconnect, Pid}, State) ->
-    io:format("Disconnected: ~p~n",[Pid]),
+handle_event({disconnect, _Pid}, State) ->
+    %io:format("Disconnected: ~p~n",[Pid]),
     {ok, State}.
     
 handle_call(_, State) ->
