@@ -4,7 +4,7 @@
 -export([init/1, handle_event/2, handle_call/2, handle_info/2, terminate/2, code_change/3]).
 -include_lib("../deps/socketio/include/socketio.hrl").
 -define(HASH_SIZE, 160).
--record(state, {peer_addr}).
+-record(state, {peer_addr, client_pid = undefined}).
 
 init([Request]) ->
     PeerAddr = misultin_ws:get(peer_addr, Request),
@@ -16,12 +16,7 @@ handle_event({message, Client, #msg{content = Content}}, State) ->
         {ok, Command, Params, Ref} ->
             handle_command(Client, Command, Params, Ref, State);
         error ->
-            Response = [{<<"error">>, [
-                {<<"code">>, 400},
-                {<<"text">>, <<"Bad request">>},
-                {<<"message">>, Content}
-            ]}],
-            socketio_client:send(Client, #msg{json = true, content = Response}),
+            bad_request(Client, Content),
             {ok, State}
     end.
     
@@ -54,18 +49,19 @@ send_response(Client, Command, Payload, Ref) ->
     end,
     Content = [{Command, Payload}|Response],
     socketio_client:send(Client, #msg{json = true, content = Content}).
-    
+
+handle_command(Client, Command, Params, Ref, #state{client_pid=Pid} = State) when is_pid(Pid) ->
+    registered_command(Client, Command, Params, Ref, State),
+    {ok, State};
 handle_command(Client, <<"register">>, Params, _Ref, State) ->
     register_client(Client, Params),
     {ok, State};
 handle_command(Client, Command, Params, Ref, State) ->
-    send_response(Client, <<"error">>, [
-        {<<"code">>, 404},
-        {<<"text">>, <<"Unknown command">>},
-        {<<"command">>, Command}, 
-        {<<"params">>, Params}
-    ], Ref),
+    not_found(Client, Command, Params, Ref),
     {ok, State}.
+    
+registered_command(Client, Command, Params, Ref, _State) ->
+    not_found(Client, Command, Params, Ref).
 
 register_client(_Client, Params) ->
     Tripcode = case proplists:get_value(<<"tripcode">>, Params) of
@@ -76,3 +72,19 @@ register_client(_Client, Params) ->
     end,
 
     io:format("Registering with tripcode: ~p~n", [Tripcode]).
+    
+bad_request(Client, Content) ->
+    Response = [{<<"error">>, [
+        {<<"code">>, 400},
+        {<<"text">>, <<"Bad request">>},
+        {<<"message">>, Content}
+    ]}],
+    socketio_client:send(Client, #msg{json = true, content = Response}).
+    
+not_found(Client, Command, Params, Ref) ->
+    send_response(Client, <<"error">>, [
+        {<<"code">>, 404},
+        {<<"text">>, <<"Unknown command">>},
+        {<<"command">>, Command}, 
+        {<<"params">>, Params}
+    ], Ref).
