@@ -14,5 +14,5 @@ main(_) ->
         {default_http_handler, webbus_http_handler}
     ]),
     EventMgr = socketio_listener:event_manager(Pid),
-    ok = gen_event:add_handler(EventMgr, webbus_event_handler, []),
+    ok = gen_event:add_handler(EventMgr, webbus_connection_handler, []),
     receive _ -> ok end.

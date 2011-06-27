@@ -1,5 +1,5 @@
-% Socket.io event handler
--module(webbus_event_handler).
+% Socket.io connection handler
+-module(webbus_connection_handler).
 -behaviour(gen_event).
 -export([init/1, handle_event/2, handle_call/2, handle_info/2, terminate/2, code_change/3]).
 -include_lib("../deps/socketio/include/socketio.hrl").
@@ -65,4 +65,8 @@ register_client(Client, Params) ->
         Bin when is_binary(Bin) ->
             Bin
     end,
+    
+    % FIXME: At some point snag the cleint IP out of here
+    % Request = socketio_client:request(Client),
+
     io:format("Registering with tripcode: ~p~n", [Tripcode]).
