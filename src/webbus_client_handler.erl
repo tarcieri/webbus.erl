@@ -11,20 +11,19 @@ init([Request]) ->
     io:format("*** ~p connected~n", [PeerAddr]),
     {ok, #state{peer_addr = PeerAddr}}.
     
-handle_event({message, Client, #msg{content = [{Command, Params}]}}, State) ->
-    handle_command(Command, Client, Params, State),
-    {ok, State};
 handle_event({message, Client, #msg{content = Content}}, State) ->
-    Response = [{<<"error">>, [
-        {<<"code">>, 400},
-        {<<"text">>, <<"Bad request">>},
-        {<<"message">>, Content}
-    ]}],
-    socketio_client:send(Client, #msg{json = true, content = Response}),
-    {ok, State};
-handle_event(_Event, State) ->
-    %% FIXME: Uhh, log unknown event or something?
-    {ok, State}.
+    case parse_command(Content) of
+        {ok, Command, Params, Ref} ->
+            handle_command(Client, Command, Params, Ref, State);
+        error ->
+            Response = [{<<"error">>, [
+                {<<"code">>, 400},
+                {<<"text">>, <<"Bad request">>},
+                {<<"message">>, Content}
+            ]}],
+            socketio_client:send(Client, #msg{json = true, content = Response}),
+            {ok, State}
+    end.
     
 handle_call(_, State) ->
     {reply, ok, State}.
@@ -39,17 +38,33 @@ terminate(_Reason, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
     
-handle_command(<<"register">>, Client, Params, State) ->
+parse_command([{Command, Params}]) ->
+    {ok, Command, Params, undefined};
+parse_command([{Command, Params}, {<<"ref">>, _} = Ref]) ->
+    {ok, Command, Params, Ref};
+parse_command([{<<"ref">>, _} = Ref, {Command, Params}]) ->
+    {ok, Command, Params, Ref};
+parse_command(_) ->
+    error.
+
+send_response(Client, Command, Payload, Ref) ->
+    Response = case Ref of
+        {<<"ref">>, _} -> [Ref];
+        undefined      -> []
+    end,
+    Content = [{Command, Payload}|Response],
+    socketio_client:send(Client, #msg{json = true, content = Content}).
+    
+handle_command(Client, <<"register">>, Params, _Ref, State) ->
     register_client(Client, Params),
     {ok, State};
-handle_command(Command, Client, Params, State) ->
-    Response = [{<<"error">>, [
+handle_command(Client, Command, Params, Ref, State) ->
+    send_response(Client, <<"error">>, [
         {<<"code">>, 404},
         {<<"text">>, <<"Unknown command">>},
         {<<"command">>, Command}, 
         {<<"params">>, Params}
-    ]}],
-    socketio_client:send(Client, #msg{json = true, content = Response}),
+    ], Ref),
     {ok, State}.
 
 register_client(_Client, Params) ->
