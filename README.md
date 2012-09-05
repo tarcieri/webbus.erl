@@ -16,3 +16,9 @@ subscribers) which would be the primary mechanism used to share capabilities.
 Erlang was treating me all right for most of this project, but eventually I
 gave it up to write Celluloid. It's a project I'd like to resume, in some form,
 but I think this time around I'd like to try writing it with DCell.
+
+Significance
+------------
+
+This is probably a non-notable project aside from the fact it's probably the
+first published work that connects 4chan's tripcodes to crypto capabilities.
